@@ -51,8 +51,6 @@ Access to the ssh is available only for the `sandbox` user authorized by an ssh 
 ssh keys should be passed to the `AUTHORIZED_KEYS` environment variable. The format of this
 variable is the same as the format of the `~/.ssh/authorized_keys` file.
 
-Server ssh keys are always automatically generated if necessary. If you want to keep the
-ssh host keys stable, just make the directory `/persistent` as a persistent volume.
-But it is strongly recommended not to relay on the ssh host keys at all, since it is easy to
-    leak the keys from the sandbox.
-
+Server ssh host keys are **intentionally** pregenerated and therefore **insecure**. It is because
+ssh keys could be anyway leaked from the sandbox and therefore nobody should rely on the used
+host keys security. **Connect to the sandbox only from a secure network.**

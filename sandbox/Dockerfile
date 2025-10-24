@@ -12,22 +12,23 @@ RUN apt-get update && \
         git-lfs \
         openssh-server \
 	    && \
-	rm -rf /var/lib/apt/lists/*
+	rm -rf /var/lib/apt/lists/* /etc/ssh/ssh_host_* /etc/ssh/sshd_config.d
 
 ENV DOCKER_TLS_CERTDIR=/certs
-RUN mkdir -p /certs /certs/client /var/lib/docker /run/sshd /persistent && chmod 1777 /certs /certs/client
+RUN mkdir -p /certs /certs/client /var/lib/docker /run/sshd && chmod 1777 /certs /certs/client
 
 COPY --from=docker:dind /usr/local/bin/ /usr/local/bin/
 
 COPY sshd_config /etc/ssh/sshd_config
-
+COPY ssh-host-keys/ /etc/ssh/
 COPY entrypoint.sh /usr/local/bin/
 
 RUN groupadd -r -g 984 docker && \
     useradd -s /bin/bash -m sandbox -G docker && \
     mkdir /home/sandbox/.ssh && \
     chown sandbox:sandbox /home/sandbox/.ssh && \
-    chmod 0700 /home/sandbox/.ssh
+    chmod 0700 /home/sandbox/.ssh && \
+    chmod 0600 /etc/ssh/ssh_host_*
 
 EXPOSE 22
 

@@ -1,11 +1,5 @@
 #!/bin/bash
 
-mkdir -p /persistent/ssh-keys/etc/ssh
-
-ssh-keygen -A -f /persistent/ssh-keys
-
-/usr/sbin/sshd
-
 if [ -n "$AUTHORIZED_KEYS" ]; then
     echo "$AUTHORIZED_KEYS" > /home/sandbox/.ssh/authorized_keys
     chown sandbox:sandbox /home/sandbox/.ssh/authorized_keys
@@ -13,5 +7,7 @@ if [ -n "$AUTHORIZED_KEYS" ]; then
 else
     rm -f /home/sandbox/.ssh/authorized_keys
 fi
+
+/usr/sbin/sshd
 
 exec dockerd-entrypoint.sh "$@"

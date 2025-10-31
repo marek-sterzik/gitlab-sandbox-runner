@@ -28,7 +28,8 @@ RUN groupadd -r -g 984 docker && \
     mkdir /home/sandbox/.ssh && \
     chown sandbox:sandbox /home/sandbox/.ssh && \
     chmod 0700 /home/sandbox/.ssh && \
-    chmod 0600 /etc/ssh/ssh_host_*
+    chmod 0600 /etc/ssh/ssh_host_* && \
+    rm -f /home/sandbox/.bashrc /home/sandbox/.bash_logout /home/sandbox/.profile
 
 EXPOSE 22
 

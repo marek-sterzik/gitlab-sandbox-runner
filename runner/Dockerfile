@@ -12,8 +12,10 @@ RUN apt-get update && \
 	rm -rf /var/lib/apt/lists/* /tmp/*
 
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
+COPY user-entrypoint.sh /usr/local/bin/user-entrypoint.sh
 
-USER gitlab-runner
+RUN mkdir /persistent 
+
 WORKDIR /home/gitlab-runner
 
 ENTRYPOINT ["docker-entrypoint.sh"]

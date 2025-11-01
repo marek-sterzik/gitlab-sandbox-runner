@@ -1,0 +1,81 @@
+#!/bin/bash
+
+set -e
+
+compose_image_name() {
+    local image_prefix="$1"
+    echo "${image_prefix%/}/$2"
+}
+
+cd "`which "$0"/..`"
+
+help=""
+image_prefix=""
+push=""
+prune=""
+invalid=""
+images=(runner sandbox)
+
+options="`getopt -o hi:t:pP --long help --long image-prefix: --long push --long prune -- "$@"`"
+
+if [ "$?" -eq "0" ]; then
+    eval set -- "$options"
+    while [ "$1" != "--" ]; do
+        case "$1" in
+        --help|-h)
+            help="1";;
+        --push|-p)
+            push="1";;
+        --prune|-P)
+            prune="1";;
+        --image-prefix|-i)
+            image_prefix="$2"
+            shift;;
+        *)
+            invalid=1;;
+        esac
+        shift
+    done
+    shift
+else
+    invalid=1
+fi
+
+if [ "$#" -gt 0 ]; then
+    invalid=1
+fi
+
+if [ -n "$help" ]; then
+    echo "usage: $0 --image-prefix <image-prefix> [--push] [--prune]" 1>&2
+    echo "Build and push lbproxy container." 1>&2
+    echo 1>&2
+    echo "options" 1>&2
+    echo "  -i --image-prefix <image-prefix>  build this image" 1>&2
+    echo "  -p --push                         push containers to registry" 1>&2
+    echo "  -P --prune                        prune after the whole operation" 1>&2
+    exit 0
+fi
+
+if [ -n "$invalid" ]; then
+    echo "Error: invalid options" 1>&2
+    echo "Use: \"$0 --help\" for help" 1>&2
+    exit 1
+fi
+
+if [ -z "$image_prefix" ]; then
+    echo "Error: missing image prefix" 1>&2
+    echo "Use: \"$0 --help\" for help" 1>&2
+    exit 2
+fi
+
+for image in "${images[@]}"; do
+    full_image="`compose_image_name "$image_prefix" "$image"`"
+    docker build -t "$full_image" "$image"
+    if [ -n "$push" ]; then
+        docker push -- "$full_image"
+    fi
+    if [ -n "$prune" ]; then
+        docker image rm "$full_image"
+    fi
+done
+

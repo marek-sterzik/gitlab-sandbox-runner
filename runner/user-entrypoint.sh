@@ -16,6 +16,18 @@ load_bool() {
     fi
 }
 
+load_int() {
+    local val
+    val="$1"
+    if [ -z "$val" ]; then
+        val="$2"
+    fi
+    if echo "$val" | grep -q '^[0-9]\+$'; then
+        val="`expr "$val" + 0`"
+        echo "$val"
+    fi
+}
+
 create_user_env() {
     mkdir -p .ssh
     chmod go-rwx .ssh
@@ -60,12 +72,17 @@ check_env() {
     fi
 
     if [ -z "$SANDBOX_LOAD_GITLAB_ENV" ]; then
-        echo "Error: invalid value of SANDBOX_LOAD_GITLAB_ENV variable (true|false)" 1>&2
+        echo "Error: invalid value of SANDBOX_LOAD_GITLAB_ENV variable (<bool>)" 1>&2
+        exit 1
+    fi
+
+    if [ -z "$CONCURRENCY" -o "$CONCURRENCY" -lt 1 ]; then
+        echo "Error: invalid value of CONCURRENCY variable (<int>)" 1>&2
         exit 1
     fi
 
     if echo "$GITLAB_URL" | grep -qv '^https\?://.*$' || [ "`echo "$GITLAB_URL" | wc -l`" -gt 1 ]; then
-        echo "Error: invalid value of GITLAB_URL variable" 1>&2
+        echo "Error: invalid value of GITLAB_URL variable (<url>)" 1>&2
         exit 1
     fi
 
@@ -77,7 +94,8 @@ check_env() {
 
 cd /home/gitlab-runner
 
-export SANDBOX_LOAD_GITLAB_ENV="`load_bool "$SANDBOX_LOAD_GITLAB" "true"`"
+SANDBOX_LOAD_GITLAB_ENV="`load_bool "$SANDBOX_LOAD_GITLAB" "true"`"
+CONCURRENCY="`load_int "$CONCURRENCY" "1"`"
 
 check_env
 create_user_env
@@ -119,6 +137,10 @@ if [ "$SANDBOX_LOAD_GITLAB_ENV" = "1" ]; then
 fi
 
 runner_args+=(--ssh-disable-strict-host-key-checking true)
+
+runner_args+=(--request-concurrency "$CONCURRENCY")
+
+echo "concurrent = $CONCURRENCY" > .gitlab-runner/config.toml
 
 gitlab-runner register "${runner_args[@]}"
 

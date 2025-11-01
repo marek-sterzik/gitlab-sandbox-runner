@@ -1,0 +1,57 @@
+services:
+    runner:
+        build: ./runner
+        volumes:
+            - runner-volume:/persistent
+        environment:
+            RUNNER_NAME: 'Standard runner #1'
+            GITLAB_URL: '<<put your gitlab url here>>'     # fill this by your gitlab url
+            GITLAB_TOKEN: '<<put your gitlab token here>>' # fill this by your gitlab token
+            CONCURRENCY: 5
+            SSH_CONNECT: 'sandbox@sandbox:22'
+            SSH_KEY: |
+                -----BEGIN OPENSSH PRIVATE KEY-----
+                b3BlbnNzaC1rZXktdjEAAAAABG5vbmUAAAAEbm9uZQAAAAAAAAABAAABlwAAAAdzc2gtcn
+                NhAAAAAwEAAQAAAYEA0RdMA+jMMVD0tvtieayIk7/5O2AdXOYtkxt431ybiHjvGzcSCyFN
+                mT2aMpngfqCSKTNzkteUDZjGaizzV3TUPvM6+7BpTYU+IKcuT+BNSJupMIM9O2SxWsWaLY
+                Q4LxV2XdXgfpIfHHcWwKxOlSO11Rm+/3qmPofBK6ny0jOuNHcNYMXi+iaCBscVWkyZaBff
+                w5R3mnO05CIphT+Veqgg7zkuw8B/qCkZUpRL3Y38taWDYUpdgAVdKUlOLhpTnWL/RIaEzF
+                b5Bva6T7CZBdSDmZXquRt9QGoJNcdBgZBYZH4FBHGXxqV6KLe9EzL9UK7CnMe2YUsi77u4
+                nH5xqvoujx7uToOp9k3H8YZdCSimB5Au397b74zFLvB0eGJx0B+e/MEQd0nv1YwIL4n5hY
+                F6cvy74GjtBUEcCg3ac+1ddIzqey1i8tu/inC2dG5zfCy5Zx5hpJ37ujGglZdPfARn5K2v
+                3LZ+AtpNWD0aLOu5nQmX9UR6JBfMoNfISJRnZ0kBAAAFgPIYBgfyGAYHAAAAB3NzaC1yc2
+                EAAAGBANEXTAPozDFQ9Lb7YnmsiJO/+TtgHVzmLZMbeN9cm4h47xs3EgshTZk9mjKZ4H6g
+                kikzc5LXlA2Yxmos81d01D7zOvuwaU2FPiCnLk/gTUibqTCDPTtksVrFmi2EOC8Vdl3V4H
+                6SHxx3FsCsTpUjtdUZvv96pj6HwSup8tIzrjR3DWDF4vomggbHFVpMmWgX38OUd5pztOQi
+                KYU/lXqoIO85LsPAf6gpGVKUS92N/LWlg2FKXYAFXSlJTi4aU51i/0SGhMxW+Qb2uk+wmQ
+                XUg5mV6rkbfUBqCTXHQYGQWGR+BQRxl8aleii3vRMy/VCuwpzHtmFLIu+7uJx+car6Lo8e
+                7k6DqfZNx/GGXQkopgeQLt/e2++MxS7wdHhicdAfnvzBEHdJ79WMCC+J+YWBenL8u+Bo7Q
+                VBHAoN2nPtXXSM6nstYvLbv4pwtnRuc3wsuWceYaSd+7oxoJWXT3wEZ+Str9y2fgLaTVg9
+                GizruZ0Jl/VEeiQXzKDXyEiUZ2dJAQAAAAMBAAEAAAF/c/p4L7LxkGlXVCgcd2E8YLgbht
+                PJdb43iWGzqjG0E/8Aohfp6kKOyHFjFq5D1/k5GaFwegMaHHChnkNQtzIWiNRh4zn3Lwi5
+                bWNOTQAd3ih5sG8bh9ZSigcRfi3Y/ETrYyE/ZPWoTCHCfR0WeaNVON8PEqb1j7m9bHrYNc
+                B04KUoxoT9YcP6W8gSEARtE1AqzlGMBiAoNmK8pSyfvWmE2yzcw7gDF0O0yBl5+2rGwfsM
+                5Opa8qgHBN+kfe4cczB1ZbSRDZANF8IQpp9UMvH4fbiC6VHZsT3sxkIRY3EItBmso5nmFw
+                shfTKDly9AtPB6uLW4hAUehaMyGiDXJIvSebs5/6pX2F8fu6mhwAhY2Q2QQHhqfZuaa5f7
+                UYI+rvGY8tZ+RMoRZCKiiTJPLkuMYTFAwwUN8FsCwZwIEvXujdxohwKKQanUw1mMDv7qs/
+                yL7buAHyuW/UEBBIjRCcuwHLwqCGi4BmKazUeQBSYthHYXAVGhG7/R2riGOQaLgKEAAADB
+                AMjEl+K5KkYymjDFcfPzaZO6U9AiLXBL0pBW3S9wkyBNWpe9t7z0dwe/ueUFwltyyJakSj
+                NRAlN+1SnrMWIIXzk9P0tNBrZ47wudph2pMwuXo2wFPNUzQTa5StU67oYxkw4jZ1dilSLc
+                qqvqxWuG9tEm9ZZiMCNFc6IuBsZ6Nsre0wu84BohIdrwkRs5BJpOSHnooC5umNa7hDIQ9u
+                //FLNFiOtAxLWC1DK7abFg20YGe56w/7xiVqNQ5xD5XK0+oAAAAMEA/qarlR8OlYS+OU3k
+                dJqu5nhQo/77c93wpfKkHS4zDUdgUX/litMvVV3ZvpXJM4XhtVxNPF2CtclKRqD82oYS8x
+                a0JN55aE+nmmT0enQWPU022pz8uS5AjhCDbuG+Fw08cYCGRKfBgdUAx7vR19J8n6Qi99ak
+                vGhZKmEMeMC107pTAxml2u/lbDwImvEqkDOPsobq/KM5j5nsQbrf5IzqNQT/SiWAlcWGM8
+                5Jz3pHsYeJWD+mMwXeCLdOfaVeAC8NAAAAwQDSMtfZPSLzl48uYr3nRFeEzHh9+q7ZACqP
+                gCqmK0y9u17b6YPqzHxYKwJcXmMu12qHh3Vbeudco52tnnYg4iSVoDNwJmBPaIxSG1eWhY
+                Nix6K9FWZ+cGCFekJSiLNgZM7oNrquhLqfER9vUgonL3rOZ66f95JGTgj7ZuCUbYuoaEsM
+                9PgbKP1ny453KJjJ5OG+59EPVWtX8dt/9flgR076nV/dQE+SwLaUao0e3UHYU+ROwshawO
+                9PCijEiLHqZMUAAAALbWFyZWtAdGlnZXI=
+                -----END OPENSSH PRIVATE KEY-----
+    sandbox:
+        build: ./sandbox
+        runtime: sysbox-runc
+        environment:
+            AUTHORIZED_KEYS: 'ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQDRF0wD6MwxUPS2+2J5rIiTv/k7YB1c5i2TG3jfXJuIeO8bNxILIU2ZPZoymeB+oJIpM3OS15QNmMZqLPNXdNQ+8zr7sGlNhT4gpy5P4E1Im6kwgz07ZLFaxZothDgvFXZd1eB+kh8cdxbArE6VI7XVGb7/eqY+h8ErqfLSM640dw1gxeL6JoIGxxVaTJloF9/DlHeac7TkIimFP5V6qCDvOS7DwH+oKRlSlEvdjfy1pYNhSl2ABV0pSU4uGlOdYv9EhoTMVvkG9rpPsJkF1IOZleq5G31Aagk1x0GBkFhkfgUEcZfGpXoot70TMv1QrsKcx7ZhSyLvu7icfnGq+i6PHu5Og6n2Tcfxhl0JKKYHkC7f3tvvjMUu8HR4YnHQH578wRB3Se/VjAgvifmFgXpy/LvgaO0FQRwKDdpz7V10jOp7LWLy27+KcLZ0bnN8LLlnHmGknfu6MaCVl098BGfkra/ctn4C2k1YPRos67mdCZf1RHokF8yg18hIlGdnSQE= user@host'
+volumes:
+    runner-volume: ~

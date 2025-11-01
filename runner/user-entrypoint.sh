@@ -71,8 +71,8 @@ check_env() {
         exit 1
     fi
 
-    if [ -z "$SANDBOX_LOAD_GITLAB_ENV" ]; then
-        echo "Error: invalid value of SANDBOX_LOAD_GITLAB_ENV variable (<bool>)" 1>&2
+    if [ -z "$SANDBOX_LOGIN_GITLAB_REGISTRY" ]; then
+        echo "Error: invalid value of SANDBOX_LOGIN_GITLAB_REGISTRY variable (<bool>)" 1>&2
         exit 1
     fi
 
@@ -94,7 +94,7 @@ check_env() {
 
 cd /home/gitlab-runner
 
-SANDBOX_LOAD_GITLAB_ENV="`load_bool "$SANDBOX_LOAD_GITLAB" "true"`"
+SANDBOX_LOGIN_GITLAB_REGISTRY="`load_bool "$SANDBOX_LOGIN_GITLAB_REGISTRY" "true"`"
 CONCURRENCY="`load_int "$CONCURRENCY" "1"`"
 
 check_env
@@ -132,8 +132,8 @@ if [ -n "$SSH_KEY" ]; then
     runner_args+=(--ssh-identity-file "/home/gitlab-runner/.ssh/id_rsa")
 fi
 
-if [ "$SANDBOX_LOAD_GITLAB_ENV" = "1" ]; then
-    runner_args+=(--pre-build-script "source gitlab-load-env" --post-build-script "source gitlab-load-env --finish")
+if [ "$SANDBOX_LOGIN_GITLAB_REGISTRY" = "1" ]; then
+    runner_args+=(--pre-build-script 'echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"')
 fi
 
 runner_args+=(--ssh-disable-strict-host-key-checking true)

@@ -56,7 +56,7 @@ Environment variables:
 * `SSH_CONNECT` - ssh connection in the form `<username>@<host>[:<port>]`
 * `SSH_KEY` - the private ssh key authenticating the ssh connection
 * `SSH_PASSWORD` (optional) - the ssh password authenticating the ssh connection
-* `SANDBOX_LOAD_GITLAB_ENV` (optional) - set to `false` if you don't want to disable invoking the gitlab specific build hook in the sandbox environment
+* `SANDBOX_LOGIN_GITLAB_REGISTRY` (optional) - set to `false` if you don't want to automatically login to gitlab registry
   (build hook is necessary for full docker concurency), default `true`
 * `CONCURRENCY` (optional) - number of concurrently invoked CI tasks, default `1`
 
@@ -70,6 +70,8 @@ using [sysbox-runc](https://github.com/nestybox/sysbox/).
 Environment variables:
 
 * `AUTHORIZED_KEYS` - ssh keys being authorized in the format of the `~/.ssh/authorized_keys` file
+* `DOCKER_CI_ISOLATION` (optional) - set to `false` if you want to disable docker isolation
+   (each gitlab build has its own configuration storing credentials)
 
 Properties of the `sandbox` container:
 

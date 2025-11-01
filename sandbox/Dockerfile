@@ -22,6 +22,7 @@ COPY --from=docker:dind /usr/local/bin/ /usr/local/bin/
 COPY sshd_config /etc/ssh/sshd_config
 COPY ssh-host-keys/ /etc/ssh/
 COPY entrypoint.sh /usr/local/bin/
+COPY gitlab-load-env /usr/local/bin/
 
 RUN groupadd -r -g 984 docker && \
     useradd -s /bin/bash -m sandbox -G docker && \

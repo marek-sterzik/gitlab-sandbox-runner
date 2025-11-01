@@ -1,0 +1,13 @@
+#!/bin/bash
+
+if [ "$1" = "--finish" ]; then
+    if [ -n "$DOCKER_CONFIG" -a -e "$DOCKER_CONFIG" ]; then
+        rm -rf "$DOCKER_CONFIG"
+    fi
+else
+    export DOCKER_CONFIG="/tmp/docker-config-$CI_JOB_ID"
+    mkdir -p "$DOCKER_CONFIG"
+    if [ -n "$CI_REGISTRY_USER" -a -n "$CI_REGISTRY_PASSWORD" -a -n "$CI_REGISTRY" ]; then
+        echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    fi
+fi

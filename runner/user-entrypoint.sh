@@ -2,6 +2,20 @@
 
 set -e
 
+load_bool() {
+    local val
+    val="$1"
+    if [ -z "$val" ]; then
+        val="$2"
+    fi
+    val="`echo "$val" | awk '{print tolower($0)}'`"
+    if [ "1" = "$val" -o "yes" = "$val" -o "true" = "$val" ]; then
+        echo 1
+    elif [ "0" = "$val" -o "no" = "$val" -o "false" = "$val" ]; then
+        echo 0
+    fi
+}
+
 create_user_env() {
     mkdir -p .ssh
     chmod go-rwx .ssh
@@ -24,27 +38,65 @@ install_ssh_key() {
     ssh-keygen -f .ssh/id_rsa -y > .ssh/id_rsa.pub
 }
 
-if [ -z "$SSH_KEY" ]; then
-    echo "Error: missing SSH_KEY variable" 1>&2
-    exit 1
-fi
+check_env() {
+    if [ -z "$GITLAB_URL" ]; then
+        echo "Error: missing GITLAB_URL variable" 1>&2
+        exit 1
+    fi
+
+    if [ -z "$GITLAB_TOKEN" ]; then
+        echo "Error: missing GITLAB_TOKEN variable" 1>&2
+        exit 1
+    fi
+
+    if [ -z "$SSH_CONNECT" ]; then
+        echo "Error: missing SSH_CONNECT variable" 1>&2
+        exit 1
+    fi
+
+    if [ -z "$SSH_PASSWORD" -a -z "$SSH_KEY" ]; then
+        echo "Error: missing SSH_KEY variable" 1>&2
+        exit 1
+    fi
+
+    if [ -z "$SANDBOX_LOAD_GITLAB_ENV" ]; then
+        echo "Error: invalid value of SANDBOX_LOAD_GITLAB_ENV" 1>&2
+        exit 1
+    fi
+}
+
+
 
 cd /home/gitlab-runner
 
-create_user_env
-install_ssh_key "$SSH_KEY"
+export SANDBOX_LOAD_GITLAB_ENV="`load_bool "$SANDBOX_LOAD_GITLAB" "true"`"
 
-gitlab-runner register \
-    --non-interactive \
-    --url "$GITLAB_URL" \
-    --token "$GITLAB_TOKEN" \
-    --executor "ssh" \
-    --name "$RUNNER_NAME" \
-    --ssh-user "sandbox" \
-    --ssh-host "sandbox" \
-    --ssh-port "22" \
-    --ssh-password "" \
-    --ssh-identity-file "/home/gitlab-runner/.ssh/id_rsa" \
-    --ssh-disable-strict-host-key-checking true
+check_env
+create_user_env
+
+runner_args=()
+
+runner_args+=(--non-interactive --url "$GITLAB_URL" --token "$GITLAB_TOKEN" --executor ssh)
+
+if [ -n "$RUNNER_NAME" ]; then
+    runner_args+=(--name "$RUNNER_NAME")
+fi
+
+runner_args+=(--ssh-user sandbox --ssh-host sandbox --ssh-port 22)
+
+runner_args+=(--ssh-password "$SSH_PASSWORD")
+
+if [ -n "$SSH_KEY" ]; then
+    install_ssh_key "$SSH_KEY"
+    runner_args+=(--ssh-identity-file "/home/gitlab-runner/.ssh/id_rsa")
+fi
+
+if [ "$SANDBOX_LOAD_GITLAB_ENV" = "1" ]; then
+    runner_args+=(--pre-build-script "source gitlab-load-env" --post-build-script "source gitlab-load-env --finish")
+fi
+
+runner_args+=(--ssh-disable-strict-host-key-checking true)
+
+gitlab-runner register "${runner_args[@]}"
 
 exec gitlab-runner run

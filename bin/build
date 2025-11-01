@@ -4,7 +4,30 @@ set -e
 
 compose_image_name() {
     local image_prefix="$1"
-    echo "${image_prefix%/}/$2"
+    echo "${image_prefix%/}/$2:$3"
+}
+
+test_in_array() {
+    local needle="$1"
+    shift
+    while [ "$#" -gt 0 ]; do
+        if [ "$needle" = "$1" ]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+join() {
+  local s="$1"
+  if [ "$#" -gt 0 ]; then
+      shift
+  fi
+  while [ "$#" -gt 0 ]; do
+    s="$s, $1"
+    shift
+  done
+  echo "$s"
 }
 
 cd "`which "$0"/..`"
@@ -14,9 +37,11 @@ image_prefix=""
 push=""
 prune=""
 invalid=""
-images=(runner sandbox)
+tag="latest"
+images=()
+available_images=(runner sandbox)
 
-options="`getopt -o hi:t:pP --long help --long image-prefix: --long push --long prune -- "$@"`"
+options="`getopt -o hi:I:t:pP --long help --long image-prefix: --long image: --long tag: --long push --long prune -- "$@"`"
 
 if [ "$?" -eq "0" ]; then
     eval set -- "$options"
@@ -24,12 +49,25 @@ if [ "$?" -eq "0" ]; then
         case "$1" in
         --help|-h)
             help="1";;
+        --tag|-t)
+            tag="$2"
+            shift;;
         --push|-p)
             push="1";;
         --prune|-P)
             prune="1";;
         --image-prefix|-i)
             image_prefix="$2"
+            shift;;
+        --image|-I)
+            if test_in_array "$2" "${available_images[@]}"; then
+                if ! test_in_array "$2" "${images[@]}"; then
+                    images+=("$2")
+                fi
+            else
+                invalid="1"
+                echo "Error: invalid image: $2" 1>&2
+            fi
             shift;;
         *)
             invalid=1;;
@@ -41,6 +79,10 @@ else
     invalid=1
 fi
 
+if [ ${#images[@]} -eq 0 ]; then
+    images=("${available_images[@]}")
+fi
+
 if [ "$#" -gt 0 ]; then
     invalid=1
 fi
@@ -50,7 +92,9 @@ if [ -n "$help" ]; then
     echo "Build and push lbproxy container." 1>&2
     echo 1>&2
     echo "options" 1>&2
-    echo "  -i --image-prefix <image-prefix>  build this image" 1>&2
+    echo "  -i --image-prefix <image-prefix>  build images with this image prefix" 1>&2
+    echo "  -I --image <image>                build this image (available images: `join "${available_images[@]}"`)" 1>&2
+    echo "  -t --tag <tag-suffix>             set tag suffix (default \"latest\")" 1>&2
     echo "  -p --push                         push containers to registry" 1>&2
     echo "  -P --prune                        prune after the whole operation" 1>&2
     exit 0
@@ -69,7 +113,7 @@ if [ -z "$image_prefix" ]; then
 fi
 
 for image in "${images[@]}"; do
-    full_image="`compose_image_name "$image_prefix" "$image"`"
+    full_image="`compose_image_name "$image_prefix" "$image" "$tag"`"
     docker build -t "$full_image" "$image"
     if [ -n "$push" ]; then
         docker push -- "$full_image"

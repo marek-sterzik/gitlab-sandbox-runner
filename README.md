@@ -2,6 +2,13 @@
 
 This repository contains a solution for a full-featured docker-enabled gitlab runner.
 
+Features:
+
+* possibility to run build commands utilizing docker
+* builds are completely isolated from the host and run in a docker container
+* easy to use solution with two containers (runner and sandbox)
+
+
 ## Overview
 
 When running CI tasks which include interaction with docker, it is quite hard to make a secure

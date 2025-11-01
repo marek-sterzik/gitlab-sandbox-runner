@@ -18,7 +18,9 @@ ENV DOCKER_TLS_CERTDIR=/certs
 RUN mkdir -p /certs /certs/client /var/lib/docker /run/sshd && chmod 1777 /certs /certs/client
 
 COPY --from=docker:dind /usr/local/bin/ /usr/local/bin/
+RUN mv /usr/local/bin/docker /usr/local/bin/docker.bin
 
+COPY docker.sh /usr/local/bin/docker.sh
 COPY sshd_config /etc/ssh/sshd_config
 COPY ssh-host-keys/ /etc/ssh/
 COPY entrypoint.sh /usr/local/bin/
@@ -30,6 +32,7 @@ RUN groupadd -r -g 984 docker && \
     chown sandbox:sandbox /home/sandbox/.ssh && \
     chmod 0700 /home/sandbox/.ssh && \
     chmod 0600 /etc/ssh/ssh_host_* && \
+    ln -s docker.sh /usr/local/bin/docker && \
     rm -f /home/sandbox/.bashrc /home/sandbox/.bash_logout /home/sandbox/.profile
 
 EXPOSE 22

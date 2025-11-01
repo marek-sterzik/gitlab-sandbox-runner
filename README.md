@@ -84,3 +84,13 @@ Properties of the `sandbox` container:
 * `sandbox` is a debian based image so other required packages may be easily installed and the
   basic sandbox image may be extended by specific custom needs.
 
+## building images
+
+Both images, `sandbox` and `runner` are quite straightforward dockerfiles. You may build them directly using docker,
+or you may use the script `bin/build` to automate all building operations. Type:
+
+```bash
+bin/build --help
+```
+
+for help.

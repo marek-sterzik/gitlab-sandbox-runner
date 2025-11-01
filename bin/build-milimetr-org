@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd "`dirname "$0"`/.."
+
+bin/build -i registry.milimetr.org/core/sandbox-runner -p -P

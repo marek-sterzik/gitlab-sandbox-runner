@@ -76,13 +76,15 @@ Environment variables:
 Properties of the `sandbox` container:
 
 * The container exposes the port 22 where the standard ssh server is listening.
-* The container ssh server uses hardcoded ssh keys and therefore it is strongly recommented.
+* The container ssh server uses hardcoded ssh keys and therefore it is strongly recommented
   to use this ssh connection only on trusted networks.
-* There is a special command `gitlab-load-env` acting as the build hook for the `runner` image.
 * Even if the user executing commands would become a root, sensitive data cannot
   leak. They are just no sensitive data inside of the container at all.
 * `sandbox` is a debian based image so other required packages may be easily installed and the
   basic sandbox image may be extended by specific custom needs.
+* If enabled by `DOCKER_CI_ISOLATION`, `sandbox` container runs the `docker` command in a way
+  causing to isolate individual builds (each build uses its own configuration, which stores
+  registry credentials). This isolation is driven by gitlab CI variables.
 
 ## building images
 

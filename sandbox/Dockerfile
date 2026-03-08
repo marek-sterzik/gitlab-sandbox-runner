@@ -18,6 +18,7 @@ ENV DOCKER_TLS_CERTDIR=/certs
 RUN mkdir -p /certs /certs/client /var/lib/docker /run/sshd && chmod 1777 /certs /certs/client
 
 COPY --from=docker:dind /usr/local/bin/ /usr/local/bin/
+COPY --from=docker:dind /usr/local/libexec/ /usr/local/libexec/
 RUN mv /usr/local/bin/docker /usr/local/bin/docker.bin
 
 COPY docker.sh /usr/local/bin/docker.sh

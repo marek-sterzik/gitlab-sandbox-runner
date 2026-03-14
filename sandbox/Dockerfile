@@ -11,6 +11,7 @@ RUN apt-get update && \
         git \
         git-lfs \
         openssh-server \
+        sudo \
 	    && \
 	rm -rf /var/lib/apt/lists/* /etc/ssh/ssh_host_* /etc/ssh/sshd_config.d
 
@@ -21,10 +22,9 @@ COPY --from=docker:dind /usr/local/bin/ /usr/local/bin/
 COPY --from=docker:dind /usr/local/libexec/ /usr/local/libexec/
 RUN mv /usr/local/bin/docker /usr/local/bin/docker.bin
 
-COPY docker.sh /usr/local/bin/docker.sh
+COPY bin/ /usr/local/bin/
 COPY sshd_config /etc/ssh/sshd_config
 COPY ssh-host-keys/ /etc/ssh/
-COPY entrypoint.sh /usr/local/bin/
 
 RUN groupadd -r -g 984 docker && \
     useradd -s /bin/bash -m sandbox -G docker && \
@@ -33,7 +33,8 @@ RUN groupadd -r -g 984 docker && \
     chmod 0700 /home/sandbox/.ssh && \
     chmod 0600 /etc/ssh/ssh_host_* && \
     ln -s docker.sh /usr/local/bin/docker && \
-    rm -f /home/sandbox/.bashrc /home/sandbox/.bash_logout /home/sandbox/.profile
+    rm -f /home/sandbox/.bashrc /home/sandbox/.bash_logout /home/sandbox/.profile && \
+    echo "ALL   ALL=(root) NOPASSWD:/usr/local/bin/pre-get-sources" >> etc/sudoers.d/pre-get-sources
 
 EXPOSE 22
 

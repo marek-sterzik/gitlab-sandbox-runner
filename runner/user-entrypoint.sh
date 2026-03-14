@@ -136,6 +136,8 @@ if [ "$SANDBOX_LOGIN_GITLAB_REGISTRY" = "1" ]; then
     runner_args+=(--pre-build-script 'echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"')
 fi
 
+runner_args+=(--pre-get-sources-script 'pre-get-sources')
+
 runner_args+=(--ssh-disable-strict-host-key-checking true)
 
 runner_args+=(--request-concurrency "$CONCURRENCY")

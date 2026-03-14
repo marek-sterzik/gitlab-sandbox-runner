@@ -1,0 +1,16 @@
+#!/bin/bash
+
+if [ "`id -u`" != 0 ]; then
+    sudo "$0" "$@"
+    exit "$?"
+fi
+
+prefix=/home/sandbox
+
+if [[ "$(realpath --relative-base="$prefix" -- "`pwd`")"  =~ ^/ ]]; then
+    echo "Error: script must be invoked inside of $prefix directory" 1>&2
+    exit 1
+else
+    chown -R --reference . .
+fi
+

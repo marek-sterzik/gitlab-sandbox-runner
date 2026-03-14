@@ -13,7 +13,9 @@ RUN apt-get update && \
         openssh-server \
         sudo \
 	    && \
-	rm -rf /var/lib/apt/lists/* /etc/ssh/ssh_host_* /etc/ssh/sshd_config.d
+	rm -rf /var/lib/apt/lists/* /etc/ssh/ssh_host_* /etc/ssh/sshd_config.d && \
+    curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 > /usr/bin/regctl.bin && \
+    chmod +x /usr/bin/regctl.bin
 
 ENV DOCKER_TLS_CERTDIR=/certs
 RUN mkdir -p /certs /certs/client /var/lib/docker /run/sshd && chmod 1777 /certs /certs/client

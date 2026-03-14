@@ -31,9 +31,13 @@ fi
 if [ "$DOCKER_CI_ISOLATION" = 1 ]; then
     rm -f /usr/local/bin/docker
     ln -s docker.sh /usr/local/bin/docker
+    rm -f /usr/local/bin/regctl
+    ln -s regctl.sh /usr/local/bin/regctl
 else
     rm -f /usr/local/bin/docker
     ln -s docker.bin /usr/local/bin/docker
+    rm -f /usr/local/bin/regctl
+    ln -s regctl.bin /usr/local/bin/regctl
 fi
 
 /usr/sbin/sshd

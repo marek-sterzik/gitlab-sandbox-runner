@@ -4,4 +4,4 @@ set -e
 
 source docker.env
 
-exec docker.bin "$@"
+exec regctl.bin "$@"

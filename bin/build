@@ -39,7 +39,7 @@ prune=""
 invalid=""
 tag="latest"
 images=()
-available_images=(runner sandbox)
+available_images=(runner sandbox sandbox-extended)
 
 options="`getopt -o hi:I:t:pP --long help --long image-prefix: --long image: --long tag: --long push --long prune -- "$@"`"
 

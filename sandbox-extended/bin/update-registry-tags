@@ -1,0 +1,134 @@
+#!/bin/bash
+
+set -e
+
+image=""
+keep_versions="3"
+pc_tag="prod-candidate"
+prod_tag="production"
+
+options="`getopt -o hik --long help --long image: --long keep-versions: --long pc-tag: --long prod-tag: -- "$@"`"
+
+if [ "$?" -eq "0" ]; then
+    eval set -- "$options"
+    while [ "$1" != "--" ]; do
+        case "$1" in
+        --help|-h)
+            help=1;;
+        --image|-i)
+            image="$2"
+            shift;;
+        --keep-versions|-k)
+            keep_versions="$2"
+            shift;;
+        --prod-tag)
+            prod_tag="$2"
+            shift;;
+        --pc-tag)
+            pc_tag="$2"
+            shift;;
+        *)
+            invalid=1;;
+        esac
+        shift
+    done
+    shift
+else
+    invalid=1
+fi
+
+if [ "$#" -gt 0 ]; then
+    invalid=1
+fi
+
+if echo "$keep_versions" | grep -qv '^[0-9]\+$'; then
+    invalid=1
+fi
+
+if [ -n "$invalid" ]; then
+    echo "Error: invalid argument, type \"$0 --help\" for help" 1>&2
+    exit 1
+fi
+
+if echo "$prod_tag" | grep -v '^[a-z0-9]\+\(-[a-z0-9]\+\)*$'; then
+    echo "Error: invalid prod tag: \"$prod_tag\"" 1>&2
+    exit 1
+fi
+
+if echo "$pc_tag" | grep -v '^[a-z0-9]\+\(-[a-z0-9]\+\)*$'; then
+    echo "Error: invalid prod candidate tag: \"$pc_tag\"" 1>&2
+    exit 1
+fi
+
+if [ "$prod_tag" = "$pc_tag" ]; then
+    echo "Error: prod tag and prod candidate tag must differ" 1>&2
+fi
+
+if [ -z "$image" ]; then
+    echo "Error: Missing image name. Please use --image option to specify the image." 1>&2
+    exit 1
+fi
+
+if [ -n "$help" ]; then
+    echo "Usage: $0 -i <image> [-k <keep-versions>] [-l]" 1>&2
+    echo "  -i --image                 Image name (without tags) to maintain version tags" 1>&2
+    echo "  -k --keep-versions         Keep this number of versions in the registry" 1>&2
+    echo "  -h --help                  Print this help" 1>&2
+    exit 0
+fi
+
+image_digest() {
+    echo "`regctl image digest "$1" 2> /dev/null || true`"
+}
+
+list_versions() {
+    regctl tag ls "$image" | sed '/^[a-z\-]\+$/d' | \
+        semversort -r -I
+}
+
+latest_version() {
+    list_versions | head -n 1
+}
+
+if echo "$keep_versions" | grep -q '^[0-9]\+$'; then
+    if [ "$keep_versions" -lt "1" ]; then
+        keep_versions=1
+    fi
+else
+    keep_versions=3
+fi
+
+production_digest="`image_digest "$image:$prod_tag"`"
+production_candidate_digest="`image_digest "$image:$pc_tag"`"
+
+move=""
+if [ "$production_digest" = "" ]; then
+    move=1
+else
+    two_best_versions="`list_versions | head -n 2`"
+    if [ "`echo "$two_best_versions" | wc -l`" = "2" ]; then
+        best_version="`echo "$two_best_versions" | head -n 1`"
+        second_best_version="`echo "$two_best_versions" | tail -n 1`"
+        best_version_digest="`image_digest "$image:$best_version"`"
+        second_best_version_digest="`image_digest "$image:$second_best_version"`"
+        if [ "$production_digest" = "$second_best_version_digest" -o "$production_digest" = "$best_version_digest" ]; then
+            if [ "$production_candidate_digest" = "$best_version_digest" ]; then
+                move=1
+            fi
+        fi
+    fi
+fi
+
+list_versions | sed "1,${keep_versions}d" | while read version; do
+    image_digest="`image_digest "$image:$version"`"
+    if [ "$image_digest" != "$production_digest" -a "$image_digest" != "$production_candidate_digest" ]; then
+        echo "Removing image: $image:$version" 1>&2
+        regctl tag rm "$image:$version"
+    fi
+done
+
+if [ -n "$move" ]; then
+    echo "Updating $image:$prod_tag" 1>&2
+    regctl image copy "$image:$pc_tag" "$image:$prod_tag"
+fi
+

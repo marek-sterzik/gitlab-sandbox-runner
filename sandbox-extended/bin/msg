@@ -1,0 +1,113 @@
+#!/bin/bash
+
+set -e
+
+help=""
+mode="message"
+invalid=""
+stdout=""
+
+options="`getopt -oewcsmho --long help --long error --long warning --long caption --long success --long message --long stdout -- "$@"`"
+
+if [ "$?" -eq "0" ]; then
+    eval set -- "$options"
+    args=("$@")
+    while [ "$1" != "--" ]; do
+        case "$1" in
+        --error|-e)
+            mode="error";;
+        --warning|-w)
+            mode="warning";;
+        --caption|-c)
+            mode="caption";;
+        --success|-s)
+            mode="success";;
+        --message|-m)
+            mode="message";;
+        --stdout|-o)
+            stdout=1;;
+        --help|-h)
+            help=1;;
+        *)
+            invalid=1;;
+        esac
+        shift
+    done
+    shift
+else
+    invalid=1
+fi
+
+if [ "$#" -eq 0 -a -z "$help" ]; then
+    invalid=1
+fi
+
+if [ -n "$invalid" ]; then
+    echo "Error: invalid argument, type \"$0 --help\" for help." 1>&2
+    exit 1
+fi
+
+if [ -n "$help" ]; then
+    echo "Usage: $0 [options] message" 1>&2
+    echo "  -c --caption  format a caption" 1>&2
+    echo "  -s --success  format a success" 1>&2
+    echo "  -e --error    format an error message" 1>&2
+    echo "  -m --message  format a message" 1>&2
+    echo "  -o --stdout   print to stdout instead of stderr" 1>&2
+    echo "  -h --help     print this help" 1>&2
+    exit 0
+fi
+
+format_message() {
+    echo
+    echo "$1" | fmt -w 75 | sed 's/^/ /'
+    echo
+}
+
+format_caption() {
+    echo
+    echo -ne '\033[34m'
+    echo -n "$1"
+    echo -ne '\033[0m'
+    echo
+    echo
+}
+
+do_format_message() {
+    local line_len=75
+    echo
+    (echo; echo "$3"; echo) | fmt -w "$line_len" | while read line; do
+        len="${#line}"
+        len="`expr "$line_len" - "$len"`"
+        echo -ne '\033['"$1"'m'
+        test -n "$2" && echo -ne '\033['"$2"'m'
+        echo -n " $line"
+        for i in `seq 1 "$len"`; do
+            echo -n " "
+        done
+        echo -ne '\033[0m'
+        echo
+    done
+    echo
+}
+
+format_success() {
+    do_format_message 30 42 "$1"
+}
+
+format_error() {
+    do_format_message 37 41 "$1"
+}
+
+format_warning() {
+    do_format_message 33 "" "$1"
+}
+
+formatter="format_$mode"
+
+if [ -z "$stdout" ]; then
+    $formatter "$*" 1>&2
+else
+    $formatter "$*"
+fi
+

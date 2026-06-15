@@ -1,0 +1,6 @@
+#!/bin/bash
+
+repository="$1" # "production" or "staging"
+package="$2"    # name of the file of the debian package
+
+msg --warning "Warning: ignoring debian package push, it is not implemented. Implement the script $(realpath "`which "$0"`") to support debian package pushes"

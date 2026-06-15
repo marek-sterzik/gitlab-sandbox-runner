@@ -1,0 +1,100 @@
+#!/bin/bash
+
+export REGISTRY="registry.mikenopa.network"
+export IMAGE="deploy/gitlab-runner"
+
+set -e
+
+cd "`dirname "$0"`"
+
+help=""
+build=""
+push=""
+login=""
+prune=""
+invalid=""
+pull="--pull"
+
+options="`getopt -o hbplPn --long help --long build --long push --long login --long prune --long no-pull -- "$@"`"
+
+if [ "$?" -eq "0" ]; then
+    eval set -- "$options"
+    while [ "$1" != "--" ]; do
+        case "$1" in
+        --help|-h)
+            help="1";;
+        --build|-b)
+            build="1";;
+        --push|-p)
+            push="1";;
+        --login|-l)
+            login="1";;
+        --prune|-P)
+            prune="1";;
+        --no-pull|-n)
+            pull="";;
+        *)
+            invalid=1;;
+        esac
+        shift
+    done
+    shift
+else
+    invalid=1
+fi
+
+if [ "$#" -gt 0 ]; then
+    invalid=1
+fi
+
+if [ -n "$help" ]; then
+    echo "usage: $0 [--login] [--build] [--push] [--prune] [--no-pull]" 1>&2
+    echo "Build and push core containers." 1>&2
+    echo 1>&2
+    echo "options" 1>&2
+    echo "  -l --login    perform a registry login before operations"
+    echo "  -b --build    build container"
+    echo "  -p --push     push container to registry"
+    echo "  -P --prune    prune after the whole operation"
+    echo "  -n --no-pull  don't pull images"
+    exit 0
+fi
+
+if [ -n "$invalid" ]; then
+    echo "Error: invalid options" 1>&2
+    echo "Use: \"$0 --help\" for help" 1>&2
+    exit 1
+fi
+
+image="$REGISTRY/$IMAGE"
+image_full="$image:production"
+
+op=""
+
+if [ -n "$login" ]; then
+    docker login "$REGISTRY"
+    op=1
+fi
+
+
+if [ -n "$build" ]; then
+    docker build $pull  -t "$image_full" .
+    op=1
+fi
+
+if [ -n "$push" ]; then
+    docker push "$image_full"
+    op=1
+fi
+
+if [ -n "$prune" ]; then
+    docker image rm "$image_full"
+    echo "y" | docker system prune | sed '/\[y\/N\]/d'
+    op=1
+fi
+
+if [ -z "$op" ]; then
+    echo "Error: no action specified" 1>&2
+    echo "for help use: $0 --help"
+    exit 1
+fi

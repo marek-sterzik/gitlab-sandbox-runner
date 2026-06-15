@@ -1,0 +1,43 @@
+#!/usr/bin/env php
+<?php
+
+$file = getcwd() . "/auth.json";
+
+$data = @file_get_contents($file);
+
+if (is_string($data)) {
+    $data = @json_decode($data, true);
+}
+
+if (!is_array($data)) {
+    $data = [];
+}
+
+if (!isset($data['http-basic']) || !is_array($data['http-basic'])) {
+    $data['http-basic'] = [];
+}
+
+$token = @getenv("CI_JOB_TOKEN");
+$host = @getenv("CI_SERVER_HOST");
+if (!is_string($token) || !is_string($host)) {
+    $token = null;
+    $host = null;
+}
+
+if ($token !== null) {
+    $data['http-basic'][$host] = [
+        "username" => "gitlab-ci-token",
+        "password" => $token,
+    ];
+}
+
+if (isset($data['gitlab-token']) && is_array($data['gitlab-token'])) {
+    unset($data['gitlab-token'][$host]);
+    if (empty($data['gitlab-token'])) {
+        unset($data['gitlab-token']);
+    }
+}
+
+$data = json_encode($data, JSON_PRETTY_PRINT) . "\n";
+
+file_put_contents($file, $data);

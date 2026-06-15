@@ -1,0 +1,351 @@
+#!/bin/bash
+
+set -e
+
+help=""
+invalid=""
+composer="1"
+mikdim="1"
+mikdeb="1"
+version_build="1"
+docker_build="1"
+composer_dev=""
+install_only=""
+auth_json=""
+keep_versions="3"
+interactive_login=""
+prod_tag="production"
+pc_tag="prod-candidate"
+staging_tag="staging"
+tag=""
+working_branch=""
+image_prefix=""
+
+options="`getopt -o hoadkLt:ib:I: --long auth-json --long no-composer --long no-mikdim --long no-mikdeb\
+                 --long no-docker-build --long no-version-build --long composer-dev --long install-only --long help \
+                 --long keep-versions: --long legacy-tags --long version-tag: --long interactive-login --long branch: \
+                 --long image-prefix: -- "$@"`"
+
+if [ "$?" -eq "0" ]; then
+    eval set -- "$options"
+    args=("$@")
+    while [ "$1" != "--" ]; do
+        case "$1" in
+        --install-only|-o)
+            install_only=1;;
+        --auth-json|-a)
+            auth_json=1;;
+        --help|-h)
+            help=1;;
+        --no-composer)
+            composer="";;
+        --no-mikdim)
+            mikdim="";;
+        --no-mikdeb)
+            mikdeb="";;
+        --no-version-build)
+            version_build="";;
+        --no-docker-build)
+            docker_build="";;
+        --composer-dev|-d)
+            composer_dev=1;;
+        --keep-versions|-k)
+            keep_versions="$2"
+            shift;;
+        --legacy-tags|-L)
+            prod_tag="prod-running"
+            pc_tag="production"
+            staging_tag="staging"
+            ;;
+        --version-tag|-t)
+            tag="$2"
+            shift;;
+        --interactive-login|-i)
+            interactive_login=1;;
+        --branch|-b)
+            working_branch="$2"
+            shift;;
+        --image-prefix|-I)
+            image_prefix="$2"
+            shift;;
+        *)
+            invalid=1;;
+        esac
+        shift
+    done
+    shift
+else
+    invalid=1
+fi
+
+if [ "$#" -gt 0 ]; then
+    invalid=1
+fi
+
+if [ -z "$composer" -a -n "$composer_dev" ]; then
+    invalid=1
+fi
+
+if echo "$keep_versions" | grep -qv '^[0-9]\+$'; then
+    invalid=1
+fi
+
+if [ -n "$invalid" ]; then
+    msg --error "Error: invalid argument, type \"$0 --help\" for help."
+    exit 1
+fi
+
+if [ -n "$help" ]; then
+    echo "Usage: $0 [options]" 1>&2
+    echo "     --no-composer                Don't install composer dependencies" 1>&2
+    echo "     --no-mikdim                  Skip the mikdim building step" 1>&2
+    echo "     --no-mikdeb                  Skip the mikdeb building step" 1>&2
+    echo "     --no-version-build           Skip the version building step" 1>&2
+    echo "     --no-docker-build            Skip the docker building step" 1>&2
+    echo "  -d --composer-dev               Install composer dev dependencies instead of prod" 1>&2
+    echo "  -a --auth-json                  Put auth.json according to gitlab credentials" 1>&2
+    echo "  -o --install-only               Proceed only with dependency installation stage and then exit" 1>&2
+    echo "  -k --keep-versions <n>          Keep last <n> versions in the tags (default 3, only used in mikdim builds)" 1>&2
+    echo "  -L --legacy-tags                Use legacy docker tags (like mikdim-script did)" 1>&2
+    echo "  -t --version-tag <tag>          Take this version for build instead of parsing version from git" 1>&2
+    echo "  -i --interactive-login          Do an interactive login to docker registry if docker registry connection is needed" 1>&2
+    echo "  -b --branch <branch>            Use this branch name instead of autodetected branch" 1>&2
+    echo "  -I --image-prefix <image>       Use this image name as the base for docker images" 1>&2
+    echo "  -h --help                       Print this help" 1>&2
+    exit 0
+fi
+
+if [ -z "$working_branch" ]; then
+    working_branch="$CI_COMMIT_BRANCH"
+
+    if [ -z "$working_branch" ]; then
+        working_branch="$CI_MERGE_REQUEST_TARGET_BRANCH_NAME"
+    fi
+
+    if [ -z "$working_branch" ]; then
+        working_branch="`git symbolic-ref --short HEAD 2> /dev/null || true`"
+    fi
+fi
+
+if [ -z "$image_prefix" ]; then
+    image_prefix="$CI_REGISTRY_IMAGE"
+fi
+
+if [ -z "$working_branch" -a -z "$install_only" ]; then
+    msg --warning "Warning: skipping build on non-branches"
+    exit 0
+fi
+
+if [ -n "$composer" -o -n "$composer_dev" ]; then
+    flags=""
+    caption="Installing composer including dev dependencies"
+    if [ -z "$composer_dev" ]; then
+        flags="--no-dev"
+        caption="Installing composer"
+    fi
+    if [ -f "composer.json" ]; then
+        msg --caption "$caption"
+        composer install --no-interaction --ignore-platform-reqs $flags
+    else
+        msg --message "Info: not installing composer dependencies, missing composer.json"
+    fi
+fi
+
+if [ -n "$auth_json" ]; then
+    msg --caption "Creating auth.json"
+    composer-authorize
+fi
+
+if [ -n "$install_only" ]; then
+    exit 0
+fi
+
+if [ -z "$working_branch" ]; then
+    msg --message "Info: nothing to do for tag builds or (or non-branch builds)"
+    exit 0
+fi
+
+if [ -z "$tag" ]; then
+    git fetch --tags > /dev/null 2>&1 || true
+    tag="`git describe --exact-match 2> /dev/null || true`"
+fi
+
+version=""
+if [ -n "$tag" ]; then
+    version="`echo "$tag" | sed 's/^v//'`"
+    if ! semversort  -n "$version" > /dev/null 2>&1; then
+        msg --warning "Warning: version string cannot be parsed"
+        version=""
+    fi
+fi
+
+
+prod_build=""
+test_version=""
+deb_push=""
+
+docker_build_tags=()
+mikdeb_flags=()
+mikdim_flags=(--prefix "$image_prefix" --no-project-branch --no-project-version)
+mikdim_op_flags=(--untag --prune)
+
+case "$working_branch" in
+production|staging)
+    if [ "$working_branch" = "production" ]; then
+        prod_build=1
+        deb_push="production"
+        docker_build_tags+=("$pc_tag" "$version")
+    else
+        docker_build_tags+=("$staging_tag")
+        deb_push="staging"
+    fi
+    mikdim_op_flags+=(--push)
+    mikdeb_flags+=(--project-version "$version")
+    test_version="1"
+    ;;
+master|main)
+    docker_build_tags+=(test)
+    mikdeb_flags+=(--project-version 0.0.0)
+    ;;
+*)
+    docker_build_tags+=(test)
+    mikdeb_flags+=(--project-version 0.0.0)
+    ;;
+esac
+
+if [ -n "$test_version" ]; then
+    if [ -z "$version" ]; then
+        msg --error "Error: cannot determine project version"
+        exit 1
+    fi
+fi
+
+if [ -n "$docker_build" -a -f "Dockerfile" ] || [ -n "$mikdim" -a -f "mikdim.yaml" ]; then
+    
+    if [ -z "$image_prefix" ]; then
+        msg --error "Error: missing docker image parameter"
+        exit 1
+    fi
+fi
+
+
+###############################################
+# Real building begins here                   #
+###############################################
+
+
+# build version string in ./version file
+if [ -n "$version_build" ]; then
+    if [ -f "version" ]; then
+        msg --caption "Invoking version build"
+        if [ "git" = "`cat version`" ]; then
+            if [ -n "$version" ]; then
+                echo "$version" > version
+            else
+                echo "unknown" > version
+            fi
+        fi
+        msg --message "Info: version is set to: '`cat version`'"
+    else
+        msg --message "Info: version file does not exist, don't building application version"
+    fi
+fi
+
+# invoke any pre-build steps by executing ./.pre-build if available
+if [ -x ".pre-build" ]; then
+    msg --caption "Invoking pre-build script"
+    ./.pre-build
+fi
+
+# invoke docker login if necessary
+if [ -n "$docker_build" -a -f "Dockerfile" ] || [ -n "$mikdim" -a -f "mikdim.yaml" ]; then
+    if [ -n "$CI_REGISTRY_USER" -a -n "$CI_REGISTRY_PASSWORD" -a -n "$CI_REGISTRY" ]; then
+        msg --caption "Performing an docker login to registry"
+        echo "$CI_REGISTRY_PASSWORD" | docker login -u "$CI_REGISTRY_USER" --password-stdin "$CI_REGISTRY"
+    else
+        msg --warning "Warning: not logging in to docker registry, missing CI variables"
+    fi
+
+    if [ -n "$interactive_login" ]; then
+        registry="`echo "$image_prefix" | sed 's|/.*$||' | grep '\.'`"
+        read -e -i "$registry" -p "enter docker registry to log in: " registry
+        echo
+        docker login -- "$registry"
+    fi
+fi
+
+block_docker_build=""
+
+# invoke mikdim builds
+if [ -n "$mikdim" ]; then
+    if [ -f "mikdim.yaml" ]; then
+        for docker_build_tag in "${docker_build_tags[@]}"; do
+            mikdim_op_flags+=(-t "$docker_build_tag")
+        done
+        msg --caption "Building docker images by mikdim"
+        mikdim "${mikdim_flags[@]}" "${mikdim_op_flags[@]}"
+
+        if [ -n "$prod_build" ]; then
+            msg --caption "Updating registry tags"
+            mikdim "${mikdim_flags[@]}" --list | while read image; do
+                msg --message "Updating image version tags for image \"$image_prefix\""
+                update-registry-tags --image "$image" --keep-versions "$keep_versions" --prod-tag "$prod_tag" --pc-tag "$pc_tag"
+            done
+        fi
+
+        if [ -n "`mikdim "${mikdim_flags[@]}" --list | while read image; do if [ "$image" = "$image_prefix" ]; then echo 1; fi; done`" ]; then
+            block_docker_build=1
+        fi
+    else
+        msg --message "Info: mikdim config file does not exist, don't building images"
+    fi
+fi
+
+# invoke Dockerfile build
+if [ -n "$docker_build" ]; then
+    if [ -f "Dockerfile" ]; then
+        if [ -z "$block_docker_build" ]; then
+            msg --caption "Building docker image using docker build"
+            docker_build_args=()
+            if [ -n "$prod_build" ]; then
+                for docker_build_tag in "${docker_build_tags[@]}"; do
+                    docker_build_args+=(-t "$image_prefix:$docker_build_tag")
+                done
+            fi
+            docker build "${docker_build_args[@]}" .
+            if [ -n "$prod_build" ]; then
+                for docker_build_tag in "${docker_build_tags[@]}"; do
+                    msg --message "pushing image $image_prefix:$docker_build_tag"
+                    docker push "$image_prefix:$docker_build_tag"
+                done
+
+                msg --caption "Updating registry tags"
+                msg --message "Updating image version tags for image \"$image_prefix\""
+                update-registry-tags --image "$image_prefix" --keep-versions "$keep_versions" --prod-tag "$prod_tag" --pc-tag "$pc_tag"
+            fi
+        else
+            msg --warning "Info: dockerfile does exist, is not disabled, but won't build it because mikdim build for that image is active"
+        fi
+    else
+        msg --message "Info: dockerfile does not exist, don't building docker images directly"
+    fi
+fi
+
+# invoke mikdeb build
+if [ -n "$mikdeb" ]; then
+    if [ -f "mikdeb.yaml" ]; then
+        msg --caption "Building debian packages by mikdim"
+        mikdeb --output-dir out-deb "${mikdeb_flags[@]}"
+    else
+        msg --message "Info: mikdeb config file does not exist, don't building debian packages"
+    fi
+    if [ -n "$deb_push" ]; then
+        msg --caption "Pushing debian packages to repository: $deb_push"
+        for deb in out-deb/*.deb; do
+            if [ -f "$deb" ]; then
+                push-debian-package "$deb_push" "$deb"
+            fi
+        done
+
+    fi
+fi

@@ -1,5 +1,7 @@
 FROM debian:bookworm
 
+COPY create-fake-gitlab-runner-helper-images /tmp/create-fake-gitlab-runner-helper-images
+
 RUN apt-get update && \
 	apt-get install -y --no-install-recommends \
 		ca-certificates \
@@ -13,6 +15,10 @@ RUN apt-get update && \
         openssh-server \
         sudo \
 	    && \
+    mkdir -p /etc/init.d && \
+    curl -s https://packages.gitlab.com/install/repositories/runner/gitlab-runner/script.deb.sh | bash && \
+    /tmp/create-fake-gitlab-runner-helper-images && \
+    apt-get install -y --no-install-recommends gitlab-runner && \
 	rm -rf /var/lib/apt/lists/* /etc/ssh/ssh_host_* /etc/ssh/sshd_config.d && \
     curl -L https://github.com/regclient/regclient/releases/latest/download/regctl-linux-amd64 > /usr/bin/regctl.bin && \
     chmod +x /usr/bin/regctl.bin

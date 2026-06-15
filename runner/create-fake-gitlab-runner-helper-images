@@ -1,0 +1,23 @@
+#!/bin/bash
+
+set -e
+
+version="`LANG="C" apt-cache policy gitlab-runner | grep '^[[:space:]]*Candidate:' | sed 's/^[[:space:]]*Candidate:[[:space:]]*//'`"
+
+mkdir -p /tmp/gitlab-runner-helper-images/DEBIAN
+
+cd /tmp
+
+cat > gitlab-runner-helper-images/DEBIAN/control <<-END
+Package: gitlab-runner-helper-images
+Version: $version
+Maintainer: Marek Sterzik <marek@milimetr.org>
+Architecture: all
+Description: This package provides an empty fake package if you don't want to install optional gitlab-runner-helper-images package.
+END
+
+dpkg-deb -b gitlab-runner-helper-images .
+
+rm -rf gitlab-runner-helper-images
+dpkg -i gitlab-runner-helper-images_*.deb
+

@@ -320,12 +320,12 @@ if [ -n "$docker_build" ]; then
                     msg --message "pushing image $image_prefix:$docker_build_tag"
                     docker push "$image_prefix:$docker_build_tag"
                 done
+            fi
 
-                if [ -n "$prod_build" ]; then
-                    msg --caption "Updating registry tags"
-                    msg --message "Updating image version tags for image \"$image_prefix\""
-                    update-registry-tags --image "$image_prefix" --keep-versions "$keep_versions" --prod-tag "$prod_tag" --pc-tag "$pc_tag"
-                fi
+            if [ -n "$prod_build" ]; then
+                msg --caption "Updating registry tags"
+                msg --message "Updating image version tags for image \"$image_prefix\""
+                update-registry-tags --image "$image_prefix" --keep-versions "$keep_versions" --prod-tag "$prod_tag" --pc-tag "$pc_tag"
             fi
         else
             msg --warning "Info: dockerfile does exist, is not disabled, but won't build it because mikdim build for that image is active"

@@ -30,7 +30,7 @@ join() {
   echo "$s"
 }
 
-cd "`which "$0"/..`"
+cd "`dirname "$0"`/.."
 
 help=""
 image_prefix=""

@@ -181,6 +181,7 @@ fi
 
 
 prod_build=""
+image_push=""
 test_version=""
 deb_push=""
 
@@ -199,9 +200,10 @@ production|staging)
         docker_build_tags+=("$staging_tag")
         deb_push="staging"
     fi
+    image_push=1
     mikdim_op_flags+=(--push)
     mikdeb_flags+=(--project-version "$version")
-    test_version="1"
+    test_version=1
     ;;
 master|main)
     docker_build_tags+=(test)
@@ -307,13 +309,13 @@ if [ -n "$docker_build" ]; then
         if [ -z "$block_docker_build" ]; then
             msg --caption "Building docker image using docker build"
             docker_build_args=()
-            if [ -n "$prod_build" ]; then
+            if [ -n "$image_push" ]; then
                 for docker_build_tag in "${docker_build_tags[@]}"; do
                     docker_build_args+=(-t "$image_prefix:$docker_build_tag")
                 done
             fi
             docker build "${docker_build_args[@]}" .
-            if [ -n "$prod_build" ]; then
+            if [ -n "$image_push" ]; then
                 for docker_build_tag in "${docker_build_tags[@]}"; do
                     msg --message "pushing image $image_prefix:$docker_build_tag"
                     docker push "$image_prefix:$docker_build_tag"

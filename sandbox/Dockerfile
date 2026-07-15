@@ -1,4 +1,4 @@
-FROM debian:bookworm
+FROM debian:trixie
 
 COPY create-fake-gitlab-runner-helper-images /tmp/create-fake-gitlab-runner-helper-images
 
